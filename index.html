@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeBot Analyse — Robot d'analyse trading</title>
+<style>
+:root{--bg:#0b1220;--panel:#131e33;--panel2:#1a2947;--txt:#e8eefc;--mut:#8ea0c2;--green:#22c55e;--red:#ef4444;--blue:#3b82f6;--amber:#f59e0b;--line:#24365c}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:radial-gradient(1200px 600px at 20% -10%,#1b2f5e 0%,var(--bg) 55%) fixed,var(--bg);color:var(--txt);min-height:100vh}
+header{display:flex;justify-content:space-between;align-items:center;padding:18px 28px;border-bottom:1px solid var(--line);background:rgba(11,18,32,.8);backdrop-filter:blur(8px);position:sticky;top:0;z-index:10}
+.brand{display:flex;gap:12px;align-items:center}
+.logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#22c55e,#3b82f6);display:grid;place-items:center;font-weight:900;font-size:22px}
+.brand h1{font-size:19px;letter-spacing:.2px}
+.brand small{color:var(--mut);font-size:12px;display:block;font-weight:400}
+.badge{background:#0f2a1a;border:1px solid #1d5c36;color:#4ade80;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700}
+.wrap{max-width:1200px;margin:0 auto;padding:24px 20px 60px}
+.grid{display:grid;grid-template-columns:320px 1fr;gap:18px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}header{flex-direction:column;gap:10px;text-align:center}}
+.card{background:linear-gradient(180deg,var(--panel),#0f1930);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.card h2{font-size:15px;margin-bottom:12px;color:#fff;display:flex;align-items:center;gap:8px}
+label{font-size:12px;color:var(--mut);display:block;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.6px}
+select,input{width:100%;background:#0b1530;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:10px 12px;font-size:14px}
+button.primary{width:100%;margin-top:16px;background:linear-gradient(135deg,#22c55e,#16a34a);border:0;color:#04120a;font-weight:800;padding:13px;border-radius:12px;font-size:15px;cursor:pointer}
+button.primary:hover{filter:brightness(1.08)}
+button.ghost{width:100%;margin-top:10px;background:transparent;border:1px solid var(--line);color:var(--txt);padding:11px;border-radius:12px;cursor:pointer;font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+.kpi span{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px}
+.kpi strong{font-size:20px;display:block;margin-top:6px}
+.kpi small{font-size:12px;color:var(--mut)}
+.up{color:var(--green)}.down{color:var(--red)}.neutral{color:var(--amber)}
+canvas{width:100%;height:300px;background:#080f22;border:1px solid var(--line);border-radius:12px}
+canvas.small{height:120px}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.6px}
+.buy{color:var(--green);font-weight:800}.sell{color:var(--red);font-weight:800}
+.log{background:#060b1a;border:1px solid var(--line);border-radius:12px;padding:12px;height:180px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.6}
+.log div{border-bottom:1px dashed #15234a;padding:3px 0}
+footer{margin-top:22px;color:var(--mut);font-size:12px;text-align:center}
+.signal-banner{display:flex;gap:12px;align-items:center;padding:14px;border-radius:14px;margin-bottom:18px;border:1px solid var(--line);background:linear-gradient(90deg,#0f2a1a,#132c5a)}
+.signal-dot{width:14px;height:14px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.4}}
+.warn{background:#2a1a05;border:1px solid #7c4a0a;color:#fcd34d;padding:12px 14px;border-radius:12px;font-size:13px;margin-top:18px}
+</style>
+</head>
+<body>
+<header>
+<div class="brand"><div class="logo">◈</div><div><h1>TradeBot Analyse<small>Robot d'analyse trading — SMA • RSI • MACD • Backtest</small></h1></div></div>
+<div class="badge">● ROBOT ACTIF — TEMPS RÉEL SIMULÉ</div>
+</header>
+<div class="wrap">
+<div class="signal-banner"><div class="signal-dot" id="dot"></div><div><strong id="mainSignal">ANALYSE EN COURS…</strong><div style="color:#8ea0c2;font-size:13px" id="mainSub">Initialisation du robot…</div></div></div>
+<div class="kpis">
+<div class="kpi"><span>Prix actuel</span><strong id="kPrice">—</strong><small id="kPriceSub">—</small></div>
+<div class="kpi"><span>Signal robot</span><strong id="kSignal">—</strong><small id="kConf">—</small></div>
+<div class="kpi"><span>RSI (14)</span><strong id="kRsi">—</strong><small id="kRsiSub">—</small></div>
+<div class="kpi"><span>Backtest • Profit</span><strong id="kProfit">—</strong><small id="kStats">—</small></div>
+</div>
+<div class="grid">
+<div class="card">
+<h2>⚙️ Configuration du robot</h2>
+<label>Actif analysé</label>
+<select id="symbol"><option value="BTC/EUR">BTC / EUR</option><option value="ETH/EUR">ETH / EUR</option><option value="CAC40">CAC 40</option><option value="EUR/USD">EUR / USD</option><option value="AAPL">AAPL (Nasdaq)</option></select>
+<label>Stratégie</label>
+<select id="strategy"><option value="sma">Croisement SMA 20 / SMA 50</option><option value="rsi">RSI + SMA (survente/surachat)</option><option value="macd">MACD + Tendance</option></select>
+<label>Période</label>
+<select id="period"><option value="120">120 bougies (intraday)</option><option value="200" selected>200 bougies (swing)</option><option value="300">300 bougies (long terme)</option></select>
+<label>Capital de backtest (€)</label>
+<input id="capital" type="number" value="10000" min="100" step="100">
+<button class="primary" id="runBtn">▶ Lancer l'analyse du robot</button>
+<button class="ghost" id="liveBtn">⏸ Pause temps réel</button>
+<div class="warn">⚠️ Outil pédagogique. Ceci n'est pas un conseil financier. Le trading comporte un risque de perte.</div>
+</div>
+<div>
+<div class="card">
+<h2>📈 Graphique prix + signaux robot</h2>
+<canvas id="priceChart" width="800" height="300"></canvas>
+<div style="display:flex;gap:14px;font-size:12px;color:#8ea0c2;margin-top:8px"><span><i style="color:#e8eefc">—</i> Prix</span><span><i style="color:#f59e0b">—</i> SMA 20</span><span><i style="color:#3b82f6">—</i> SMA 50</span><span><i style="color:#22c55e">▲</i> Achat</span><span><i style="color:#ef4444">▼</i> Vente</span></div>
+</div>
+<div class="card" style="margin-top:18px">
+<h2>📊 RSI (14) — momentum</h2>
+<canvas id="rsiChart" class="small" width="800" height="120"></canvas>
+</div>
+<div class="grid" style="grid-template-columns:1fr 1fr;margin-top:18px">
+<div class="card"><h2>🧾 Derniers signaux</h2><table><thead><tr><th>#</th><th>Type</th><th>Prix</th><th>Raison</th></tr></thead><tbody id="sigBody"></tbody></table></div>
+<div class="card"><h2>🤖 Journal du robot</h2><div class="log" id="log"></div></div>
+</div>
+</div>
+</div>
+<div class="card" style="margin-top:18px">
+<h2>📋 Comment créer votre propre robot ? — Méthode en 5 étapes</h2>
+<table><thead><tr><th>Étape</th><th>Action</th><th>Outil conseillé</th></tr></thead><tbody>
+<tr><td><strong>1. Données</strong></td><td>Récupérez les prix OHLC via API exchange (Binance, Kraken) ou Yahoo Finance.</td><td>Python + ccxt / yfinance</td></tr>
+<tr><td><strong>2. Indicateurs</strong></td><td>Calculez SMA, RSI, MACD comme dans cette app (voir code source).</td><td>pandas, ta-lib</td></tr>
+<tr><td><strong>3. Signaux</strong></td><td>Définissez règles : ex. SMA20 &gt; SMA50 = achat, RSI &lt; 30 = survente.</td><td>Backtesting.py</td></tr>
+<tr><td><strong>4. Backtest</strong></td><td>Testez sur 200+ bougies, mesurez profit, winrate, drawdown.</td><td>Cette page le fait en direct</td></tr>
+<tr><td><strong>5. Automatisation</strong></td><td>Connectez à un broker avec stop-loss + taille de position 1-2%.</td><td>API + VPS + alertes</td></tr>
+</tbody></table>
+</div>
+<footer>TradeBot Analyse • App statique de démonstration • Données simulées pour l'apprentissage • © 2026</footer>
+</div>
+<script>
+function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+let prices=[],timer=null,live=true,seedBase=7;
+function genPrices(n,baseVol,basePrice){const rnd=mulberry(seedBase);let p=basePrice;const out=[];let trend=0;for(let i=0;i<n;i++){if(i%40===0)trend=(rnd()-0.48)*2;const shock=(rnd()-0.5)*baseVol+p*0.001*Math.sin(i/9);p=Math.max(basePrice*0.4,p+shock+trend*basePrice*0.002);out.push(p)}return out}
+function sma(arr,per){return arr.map((_,i)=>{if(i<per-1)return null;let s=0;for(let k=i-per+1;k<=i;k++)s+=arr[k];return s/per})}
+function rsi(arr,per=14){let g=0,l=0;const out=new Array(arr.length).fill(null);for(let i=1;i<arr.length;i++){const d=arr[i]-arr[i-1];if(i<=per){if(d>0)g+=d;else l-=d;if(i===per){g/=per;l/=per;out[i]=l===0?100:100-100/(1+g/l)}}else{const up=d>0?d:0,dn=d<0?-d:0;g=(g*(per-1)+up)/per;l=(l*(per-1)+dn)/per;out[i]=l===0?100:100-100/(1+g/l)}}return out}
+function ema(arr,per){const k=2/(per+1);let e=arr[0];return arr.map((v,i)=>{e=i===0?v:v*k+e*(1-k);return e})}
+function macd(arr){const f=ema(arr,12),s=ema(arr,26);return f.map((v,i)=>v-s[i])}
+function log(msg){const el=document.getElementById('log');const d=document.createElement('div');d.textContent=new Date().toLocaleTimeString('fr-FR')+' — '+msg;el.prepend(d)}
+function drawPrice(s20,s50,signals){const c=document.getElementById('priceChart');const x=c.getContext('2d');const W=c.width,H=c.height;x.clearRect(0,0,W,H);const all=[...prices,...s20.filter(Boolean),...s50.filter(Boolean)];const mn=Math.min(...all),mx=Math.max(...all);const pad=(mx-mn)*0.12||1;const X=i=>10+i/(prices.length-1)*(W-20);const Y=v=>H-15-(v-mn+pad*0)/(mx-mn+pad*2)*(H-30);x.strokeStyle='#1c2c52';x.lineWidth=1;for(let g=0;g<5;g++){const y=15+g*(H-30)/4;x.beginPath();x.moveTo(10,y);x.lineTo(W-10,y);x.stroke()}function line(arr,col){x.strokeStyle=col;x.lineWidth=arr===prices?2.2:1.6;x.beginPath();arr.forEach((v,i)=>{if(v==null)return;const px=X(i),py=Y(v);if(i===0||arr[i-1]==null)x.moveTo(px,py);else x.lineTo(px,py)});x.stroke()}line(prices,'#e8eefc');line(s20,'#f59e0b');line(s50,'#3b82f6');signals.forEach(s=>{const px=X(s.i),py=Y(s.price);x.fillStyle=s.type==='BUY'?'#22c55e':'#ef4444';x.beginPath();if(s.type==='BUY'){x.moveTo(px,py-16);x.lineTo(px-6,py-5);x.lineTo(px+6,py-5);x.closePath()}else{x.moveTo(px,py+16);x.lineTo(px-6,py+5);x.lineTo(px+6,py+5);x.closePath()}x.fill()})}
+function drawRsi(r){const c=document.getElementById('rsiChart');const x=c.getContext('2d');const W=c.width,H=c.height;x.clearRect(0,0,W,H);const Y=v=>H-10-(v/100)*(H-20);x.strokeStyle='#7c4a0a';x.setLineDash([5,5]);[70,30].forEach(v=>{x.beginPath();x.moveTo(10,Y(v));x.lineTo(W-10,Y(v));x.stroke()});x.setLineDash([]);x.strokeStyle='#a78bfa';x.lineWidth=2;x.beginPath();r.forEach((v,i)=>{if(v==null)return;const px=10+i/(r.length-1)*(W-20),py=Y(v);i===0||r[i-1]==null?x.moveTo(px,py):x.lineTo(px,py)});x.stroke()}
+function analyze(){const sym=document.getElementById('symbol').value;const strat=document.getElementById('strategy').value;const n=parseInt(document.getElementById('period').value,10);const cap=parseFloat(document.getElementById('capital').value)||10000;seedBase=(seedBase*9301+49297)%233280 + sym.length*13;const bases={'BTC/EUR':62000,'ETH/EUR':3200,'CAC40':7600,'EUR/USD':1.08,'AAPL':225};const vols={'BTC/EUR':1400,'ETH/EUR':90,'CAC40':60,'EUR/USD':0.008,'AAPL':3};const bp=bases[sym]||100,vol=vols[sym]||2;prices=genPrices(n,vol,bp);const s20=sma(prices,20),s50=sma(prices,50),r=rsi(prices,14),m=macd(prices);const signals=[];for(let i=50;i<n;i++){let buy=false,sell=false,why='';if(strat==='sma'){if(s20[i-1]<=s50[i-1]&&s20[i]>s50[i]){buy=true;why='SMA20 croise SMA50 ↑'}if(s20[i-1]>=s50[i-1]&&s20[i]<s50[i]){sell=true;why='SMA20 croise SMA50 ↓'}}else if(strat==='rsi'){if(r[i]!==null&&r[i-1]!==null){if(r[i-1]<30&&r[i]>=30&&prices[i]>s20[i]){buy=true;why='RSI sort de survente + > SMA20'}if(r[i-1]>70&&r[i]<=70){sell=true;why='RSI sort de surachat'}}}else{if(m[i-1]<=0&&m[i]>0&&prices[i]>s50[i]){buy=true;why='MACD passe positif + tendance'}if(m[i-1]>=0&&m[i]<0){sell=true;why='MACD passe négatif'}}if(buy)signals.push({i,type:'BUY',price:prices[i],why});if(sell)signals.push({i,type:'SELL',price:prices[i],why})}let cash=cap,pos=0,trades=0,wins=0,peak=cap,maxDD=0;let lastBuy=0;signals.forEach(s=>{if(s.type==='BUY'&&pos===0){pos=cash/s.price;cash=0;lastBuy=s.price}if(s.type==='SELL'&&pos>0){cash=pos*s.price;pos=0;trades++;if(s.price>lastBuy)wins++}const eq=cash+pos*prices[s.i];if(eq>peak)peak=eq;maxDD=Math.max(maxDD,(peak-eq)/peak*100)});const finalEq=cash+pos*prices[n-1];const profit=finalEq-cap,pct=profit/cap*100;const last=prices[n-1],lastR=r[n-1]||50;let sig='NEUTRE',cls='neutral',conf='Confiance moyenne';const lastSig=signals[signals.length-1];if(lastSig&&n-1-lastSig.i<8){sig=lastSig.type==='BUY'?'ACHAT':'VENTE';cls=lastSig.type==='BUY'?'up':'down';conf=lastSig.why}else if(last>s50[n-1]){sig='ACHAT (tendance)';cls='up';conf='Prix > SMA50'}else{sig='VENTE (tendance)';cls='down';conf='Prix < SMA50'}
+document.getElementById('kPrice').textContent=last.toLocaleString('fr-FR',{maximumFractionDigits:2})+' €';document.getElementById('kPriceSub').textContent=sym+' • '+n+' bougies';const ks=document.getElementById('kSignal');ks.textContent=sig;ks.className=cls;document.getElementById('kConf').textContent=conf;document.getElementById('kRsi').textContent=lastR.toFixed(1);document.getElementById('kRsiSub').textContent=lastR<30?'Survente — rebond possible':lastR>70?'Surachat — prudence':'Zone neutre';const kp=document.getElementById('kProfit');kp.textContent=(profit>=0?'+':'')+profit.toLocaleString('fr-FR',{maximumFractionDigits:0})+' € ('+pct.toFixed(1)+'%)';kp.className=profit>=0?'up':'down';document.getElementById('kStats').textContent=trades+' trades • '+(trades?Math.round(wins/trades*100):0)+'% gagnants • DD '+maxDD.toFixed(1)+'%';document.getElementById('mainSignal').textContent='ROBOT : '+sig+' — '+sym+' à '+last.toLocaleString('fr-FR',{maximumFractionDigits:2});document.getElementById('mainSub').textContent=conf+' • '+signals.length+' signaux détectés • Backtest '+pct.toFixed(1)+'%';document.getElementById('dot').style.background=cls==='up'?'#22c55e':cls==='down'?'#ef4444':'#f59e0b';const tb=document.getElementById('sigBody');tb.innerHTML='';signals.slice(-6).reverse().forEach((s,idx)=>{const tr=document.createElement('tr');tr.innerHTML='<td>'+(signals.length-idx)+'</td><td class="'+(s.type==='BUY'?'buy':'sell')+'">'+(s.type==='BUY'?'▲ ACHAT':'▼ VENTE')+'</td><td>'+s.price.toLocaleString('fr-FR',{maximumFractionDigits:2})+'</td><td>'+s.why+'</td>';tb.appendChild(tr)});drawPrice(s20,s50,signals);drawRsi(r);log('Analyse '+sym+' ['+strat+'] : '+signals.length+' signaux, profit '+pct.toFixed(1)+'%, '+trades+' trades clos.');log('Signal actuel : '+sig+' — '+conf+'.')}
+document.getElementById('runBtn').addEventListener('click',analyze);
+document.getElementById('liveBtn').addEventListener('click',e=>{live=!live;e.target.textContent=live?'⏸ Pause temps réel':'▶ Reprendre temps réel';if(live){timer=setInterval(tick,2500)}else clearInterval(timer);log(live?'Flux temps réel repris.':'Flux temps réel en pause.')});
+function tick(){if(!live||!prices.length)return;const last=prices[prices.length-1];const vol=last*0.002;prices.push(Math.max(0.01,last+(Math.random()-0.5)*vol*4));prices.shift();analyze_lite()}
+function analyze_lite(){const s20=sma(prices,20),s50=sma(prices,50),r=rsi(prices,14);const last=prices[prices.length-1];document.getElementById('kPrice').textContent=last.toLocaleString('fr-FR',{maximumFractionDigits:2})+' €';drawPrice(s20,s50,[]);drawRsi(r)}
+analyze();timer=setInterval(tick,2500);
+</script>
+</body>
+</html>
